@@ -1,0 +1,27 @@
+version: '3.9'
+services:
+  quant_mysql:
+    image: mysql:9.3.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: quant_db
+    volumes:
+      - quant_mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+  quant_app:
+    image: quant_app:v1
+    depends_on: 
+      - quant_mysql
+    environment:
+      MYSQL_HOST: quant_mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_DB: quant_db
+    working_dir: /quant_app 
+    command: python main.py
+
+volumes:
+  quant_mysql_data:  
+
