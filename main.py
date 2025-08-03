@@ -1,61 +1,23 @@
+import sys
+import importlib.util
 import os
-import mysql.connector
-import time
-import socket
-from mysql.connector import Error
 
-def get_mysql_connection():
-    """读取环境变量并连接 MySQL 数据库"""
+# 待执行的脚本列表（仅需文件名，无需 .py 后缀）
+scripts_to_run = ["connect_mysql", "data_downloader", "data_cleaner", "factor_calculation", "portfoliobuild"]  # 注意子目录需用点分隔
+
+for script_name in scripts_to_run:
     try:
-        host = os.getenv("MYSQL_HOST", "quant_mysql")  
-        port = int(os.getenv("MYSQL_PORT", 3306))    
-        user = os.getenv("MYSQL_USER", "root")
-        password = os.getenv("MYSQL_PASSWORD", "root")
-        database = os.getenv("MYSQL_DB", None)       # 查看所有数据库时无需指定数据库
-     
-        connection = mysql.connector.connect(
-            host=host,
-            port=port,
-            user=user,
-            password=password,
-            database=database
-        )
+        sys.path.append(os.getcwd())  # 确保当前目录在搜索路径中
 
-        if connection.is_connected():
-            print("成功连接到 MySQL 服务！")
-            return connection
+        # 动态加载模块
+        spec = importlib.util.spec_from_file_location(script_name, f"{script_name}.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
 
-    except Error as e:
-        print(f"连接 MySQL 失败: {e}")
-        return None
-
-def list_all_databases(connection):
-    """执行 SHOW DATABASES 命令并打印结果"""
-    try:
-        cursor = connection.cursor()
-        cursor.execute("SHOW DATABASES;")
-        databases = cursor.fetchall()
-
-        print("\n所有数据库列表：")
-        for db in databases:
-            print(f"- {db[0]}")  # 结果是元组，取第一个元素（数据库名）
-
-    except Error as e:
-        print(f"查询数据库失败: {e}")
+        # 调用模块的 main 函数（假设每个脚本都有 main 函数）
+        print(f"=== 执行 {script_name} 的 main 函数 ===")
+        module.main()
+    except Exception as e:
+        print(f"=== 执行 {script_name} 的 main 函数时出错：{str(e)}")
     finally:
-        if connection and connection.is_connected():
-            cursor.close()
-
-if __name__ == "__main__":
-    # 等mysql起来
-    time.sleep(20)
-    mysql_conn = get_mysql_connection()
-    
-    if mysql_conn:
-        # 列出所有数据库
-        list_all_databases(mysql_conn)
-        
-        # 关闭连接
-        if mysql_conn.is_connected():
-            mysql_conn.close()
-            print("\n数据库连接已关闭。")
+        sys.path.pop()  # 移除当前目录（根据实际情况调整）
